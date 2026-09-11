@@ -52,10 +52,13 @@ export async function answerFinancialQuestion(userId: string, intent: AssistantI
   }
 
   if (intent.intent === "TOP_CATEGORIES") {
-    const rows = await db.select({ name: category.name, amount: sql<number>`sum(${financeTransaction.amount})::int`, transactionCount: count() }).from(financeTransaction).innerJoin(category, eq(financeTransaction.categoryId, category.id)).where(and(base, eq(financeTransaction.type, "EXPENSE"))).groupBy(category.id, category.name).orderBy(desc(sql`sum(${financeTransaction.amount})`)).limit(3);
-    const top = rows[0]; const total = rows.reduce((sum, item) => sum + Number(item.amount), 0);
+    const [rows, totalRows] = await Promise.all([
+      db.select({ name: category.name, amount: sql<number>`sum(${financeTransaction.amount})::int`, transactionCount: count() }).from(financeTransaction).innerJoin(category, eq(financeTransaction.categoryId, category.id)).where(and(base, eq(financeTransaction.type, "EXPENSE"))).groupBy(category.id, category.name).orderBy(desc(sql`sum(${financeTransaction.amount})`)).limit(3),
+      db.select({ amount: sql<number>`coalesce(sum(${financeTransaction.amount}), 0)::int` }).from(financeTransaction).where(and(base, eq(financeTransaction.type, "EXPENSE"))),
+    ]);
+    const top = rows[0]; const total = Number(totalRows[0]?.amount ?? 0);
     if (!top) return { answer: `Belum ada pengeluaran ${periodLabel(intent.period)}.`, suggestions };
-    return { answer: `${top.name} adalah kategori pengeluaran terbesar ${periodLabel(intent.period)}.`, metric: formatRupiah(Number(top.amount)), details: [`${top.transactionCount} transaksi`, total ? `${Math.round((Number(top.amount) / total) * 100)}% dari kategori teratas` : ""].filter(Boolean), suggestions };
+    return { answer: `${top.name} adalah kategori pengeluaran terbesar ${periodLabel(intent.period)}.`, metric: formatRupiah(Number(top.amount)), details: [`${top.transactionCount} transaksi`, total ? `${Math.round((Number(top.amount) / total) * 100)}% dari total pengeluaran` : ""].filter(Boolean), suggestions };
   }
 
   if (intent.intent === "CATEGORY_SPENDING") {

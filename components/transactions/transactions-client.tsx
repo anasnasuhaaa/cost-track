@@ -8,11 +8,18 @@ import { formatRupiah } from "@/lib/finance/calculations";
 
 type Transaction = { id: string; type: "INCOME" | "EXPENSE"; amount: number; description: string; transactionDate: string; source: "MANUAL" | "AI"; accountId: string; accountName: string; categoryId: string; categoryName: string };
 type Result = { items: Transaction[]; total: number; page: number; pages: number };
+type FilterOption = { id: string; name: string };
 
 export function TransactionsClient() {
   const [result, setResult] = useState<Result>({ items: [], total: 0, page: 1, pages: 1 });
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [accounts, setAccounts] = useState<FilterOption[]>([]);
+  const [categories, setCategories] = useState<FilterOption[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
@@ -21,15 +28,28 @@ export function TransactionsClient() {
     const params = new URLSearchParams({ page: String(page), pageSize: "20" });
     if (search) params.set("search", search);
     if (type) params.set("type", type);
+    if (accountId) params.set("accountId", accountId);
+    if (categoryId) params.set("categoryId", categoryId);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
     try {
       const response = await fetch(`/api/transactions?${params}`, { cache: "no-store" });
       if (!response.ok) throw new Error();
       setResult(await response.json());
     } catch { toast.error("Daftar transaksi gagal dimuat."); }
     finally { setLoading(false); }
-  }, [page, search, type]);
+  }, [accountId, categoryId, from, page, search, to, type]);
 
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void Promise.all([fetch("/api/accounts"), fetch("/api/categories")]).then(async ([accountResponse, categoryResponse]) => {
+        if (accountResponse.ok) setAccounts(await accountResponse.json());
+        if (categoryResponse.ok) setCategories(await categoryResponse.json());
+      });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   useEffect(() => {
     const refresh = () => void load();
     window.addEventListener("cost-track:transactions-changed", refresh);
@@ -50,10 +70,13 @@ export function TransactionsClient() {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 rounded-2xl border bg-card p-3 sm:grid-cols-[1fr_180px_auto]">
-        <label className="relative"><span className="sr-only">Cari transaksi</span><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><input className="h-11 w-full rounded-xl border bg-background pl-9 pr-3" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Cari deskripsi..." /></label>
-        <select className="h-11 rounded-xl border bg-background px-3" aria-label="Filter jenis" value={type} onChange={(event) => { setType(event.target.value); setPage(1); }}><option value="">Semua jenis</option><option value="EXPENSE">Pengeluaran</option><option value="INCOME">Pemasukan</option></select>
-        <button className="hidden h-11 items-center gap-2 rounded-xl bg-primary px-4 font-semibold text-primary-foreground sm:flex" onClick={() => window.dispatchEvent(new CustomEvent("cost-track:quick-add"))} type="button"><Plus className="size-4" />Tambah</button>
+      <div className="space-y-3 rounded-2xl border bg-card p-3">
+        <div className="grid gap-3 sm:grid-cols-[1fr_180px_auto]">
+          <label className="relative"><span className="sr-only">Cari transaksi</span><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><input className="h-11 w-full rounded-xl border bg-background pl-9 pr-3" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Cari deskripsi..." /></label>
+          <select className="h-11 rounded-xl border bg-background px-3" aria-label="Filter jenis" value={type} onChange={(event) => { setType(event.target.value); setPage(1); }}><option value="">Semua jenis</option><option value="EXPENSE">Pengeluaran</option><option value="INCOME">Pemasukan</option></select>
+          <button className="hidden h-11 items-center gap-2 rounded-xl bg-primary px-4 font-semibold text-primary-foreground sm:flex" onClick={() => window.dispatchEvent(new CustomEvent("cost-track:quick-add"))} type="button"><Plus className="size-4" />Tambah</button>
+        </div>
+        <details className="group"><summary className="tap-target flex cursor-pointer list-none items-center text-sm font-medium text-muted-foreground">Filter lanjutan <span className="ml-auto text-xs group-open:hidden">Buka</span><span className="ml-auto hidden text-xs group-open:inline">Tutup</span></summary><div className="grid gap-3 border-t pt-3 sm:grid-cols-2 xl:grid-cols-4"><select className="h-11 rounded-xl border bg-background px-3 text-sm" value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(1); }} aria-label="Filter kategori"><option value="">Semua kategori</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select className="h-11 rounded-xl border bg-background px-3 text-sm" value={accountId} onChange={(event) => { setAccountId(event.target.value); setPage(1); }} aria-label="Filter akun"><option value="">Semua akun</option>{accounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><label className="space-y-1 text-xs text-muted-foreground"><span>Dari tanggal</span><input className="h-11 w-full rounded-xl border bg-background px-3 text-sm text-foreground" type="date" value={from} onChange={(event) => { setFrom(event.target.value); setPage(1); }} /></label><label className="space-y-1 text-xs text-muted-foreground"><span>Sampai tanggal</span><input className="h-11 w-full rounded-xl border bg-background px-3 text-sm text-foreground" type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(1); }} /></label></div></details>
       </div>
 
       {loading ? <LoadingRows /> : result.items.length === 0 ? <div className="rounded-2xl border border-dashed bg-card px-5 py-16 text-center"><ReceiptEmpty /><h2 className="font-heading text-lg font-semibold">Belum ada transaksi yang sesuai.</h2><p className="mt-1 text-sm text-muted-foreground">Ubah filter atau catat transaksi pertamamu.</p></div> : (

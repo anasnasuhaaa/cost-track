@@ -34,7 +34,7 @@ export async function classifyQuestion(question: string, context: { categoryName
     });
     return assistantIntentSchema.parse(raw);
   } catch (error) {
-    if (!(error instanceof GeminiUnavailableError)) throw error;
+    if (!(error instanceof GeminiUnavailableError || error instanceof z.ZodError)) throw error;
     return classifyLocally(question, context);
   }
 }

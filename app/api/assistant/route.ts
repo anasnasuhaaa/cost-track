@@ -17,6 +17,12 @@ export async function POST(request: Request) {
     const { question } = questionSchema.parse(await request.json());
     const [accounts, categories] = await Promise.all([listAccounts(user.id), listCategories(user.id)]);
     const intent = await classifyQuestion(question, { accountNames: accounts.map((item) => item.name), categoryNames: categories.map((item) => item.name) });
-    return Response.json(await answerFinancialQuestion(user.id, intent), { headers: { "Cache-Control": "no-store" } });
+    const normalize = (value: string) => value.toLocaleLowerCase("id-ID");
+    const canonicalIntent = {
+      ...intent,
+      category: intent.category ? categories.find((item) => normalize(item.name) === normalize(intent.category!))?.name ?? null : null,
+      account: intent.account ? accounts.find((item) => normalize(item.name) === normalize(intent.account!))?.name ?? null : null,
+    };
+    return Response.json(await answerFinancialQuestion(user.id, canonicalIntent), { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return apiError(error); }
 }

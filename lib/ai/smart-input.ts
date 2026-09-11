@@ -18,8 +18,8 @@ export const extractedTransactionJsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    type: { type: ["string", "null"], enum: ["INCOME", "EXPENSE", null], description: "Jenis transaksi; null jika tidak yakin." },
-    amount: { type: ["integer", "null"], minimum: 1, maximum: 2_000_000_000, description: "Nominal rupiah penuh; jangan mengarang." },
+    type: { anyOf: [{ type: "string", enum: ["INCOME", "EXPENSE"] }, { type: "null" }], description: "Jenis transaksi; null jika tidak yakin." },
+    amount: { anyOf: [{ type: "integer", minimum: 1, maximum: 2_000_000_000 }, { type: "null" }], description: "Nominal rupiah penuh; jangan mengarang." },
     description: { type: ["string", "null"], description: "Deskripsi singkat transaksi." },
     category: { type: ["string", "null"], description: "Nama kategori dari daftar yang diberikan." },
     account: { type: ["string", "null"], description: "Nama akun hanya bila disebutkan user." },

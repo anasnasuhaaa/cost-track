@@ -3,17 +3,15 @@ import { and, count, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { financeAccount, financeTransaction } from "@/db/schema";
 import { apiError, notFound, unauthorized } from "@/lib/api";
-import { accountSchema } from "@/lib/finance/validation";
+import { accountUpdateSchema } from "@/lib/finance/validation";
 import { getRequestUser } from "@/lib/session";
-
-const updateSchema = accountSchema.partial().refine((value) => Object.keys(value).length > 0);
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getRequestUser();
   if (!user) return unauthorized();
   try {
     const { id } = await params;
-    const input = updateSchema.parse(await request.json());
+    const input = accountUpdateSchema.parse(await request.json());
     const existing = await db.select().from(financeAccount).where(and(eq(financeAccount.id, id), eq(financeAccount.userId, user.id))).limit(1);
     if (!existing[0]) return notFound();
 

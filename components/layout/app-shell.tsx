@@ -58,7 +58,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
           <Link href="/dashboard" className="flex items-center gap-2 font-heading font-bold"><span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground"><Landmark className="size-4" /></span>Cost Track</Link>
           <Link href="/settings" className="tap-target grid place-items-center rounded-xl text-muted-foreground" aria-label="Buka pengaturan"><Settings className="size-5" /></Link>
         </header>
-        <div className="safe-bottom mx-auto max-w-[1440px] lg:pb-10">{children}</div>
+        <div id="main-content" className="safe-bottom mx-auto max-w-[1440px] lg:pb-10">{children}</div>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-background/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden" aria-label="Navigasi bawah">

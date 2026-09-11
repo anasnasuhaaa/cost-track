@@ -1,6 +1,8 @@
 import { Landmark } from "lucide-react";
+import { connection } from "next/server";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  await connection();
   return (
     <main className="grid min-h-dvh lg:grid-cols-[1.1fr_0.9fr]">
       <section className="relative hidden overflow-hidden bg-[#102a25] p-12 text-white lg:flex lg:flex-col lg:justify-between">
