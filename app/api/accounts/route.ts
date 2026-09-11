@@ -22,11 +22,19 @@ export async function POST(request: Request) {
   if (!user) return unauthorized();
   try {
     const input = accountSchema.parse(await request.json());
-    const created = await db.transaction(async (tx) => {
-      if (input.isDefault) await tx.update(financeAccount).set({ isDefault: false }).where(eq(financeAccount.userId, user.id));
-      const rows = await tx.insert(financeAccount).values({ ...input, userId: user.id }).returning();
-      return rows[0];
-    });
+    let created;
+
+    if (input.isDefault) {
+      const [, rows] = await db.batch([
+        db.update(financeAccount).set({ isDefault: false }).where(eq(financeAccount.userId, user.id)),
+        db.insert(financeAccount).values({ ...input, userId: user.id }).returning(),
+      ]);
+      created = rows[0];
+    } else {
+      const rows = await db.insert(financeAccount).values({ ...input, userId: user.id }).returning();
+      created = rows[0];
+    }
+
     return Response.json(created, { status: 201 });
   } catch (error) {
     return apiError(error);

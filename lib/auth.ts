@@ -23,15 +23,15 @@ export const auth = betterAuth({
     user: {
       create: {
         after: async (createdUser) => {
-          await db.transaction(async (tx) => {
-            await tx.insert(schema.userSettings).values({ userId: createdUser.id }).onConflictDoNothing();
-            await tx.insert(schema.financeAccount).values({
+          await db.batch([
+            db.insert(schema.userSettings).values({ userId: createdUser.id }).onConflictDoNothing(),
+            db.insert(schema.financeAccount).values({
               userId: createdUser.id,
               name: "Cash",
               type: "CASH",
               isDefault: true,
-            }).onConflictDoNothing();
-          });
+            }).onConflictDoNothing(),
+          ]);
         },
       },
     },
