@@ -1,8 +1,12 @@
+import "./env.config";
+
 import { defineConfig } from "drizzle-kit";
 
-const buildUrl = new URL("postgresql://localhost:5432/cost_track");
-buildUrl.username = "build";
-buildUrl.password = "placeholder";
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL wajib diisi untuk menjalankan perintah Drizzle.");
+}
 
 export default defineConfig({
   dialect: "postgresql",
@@ -11,6 +15,6 @@ export default defineConfig({
   strict: true,
   verbose: true,
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? buildUrl.toString(),
+    url: databaseUrl,
   },
 });
