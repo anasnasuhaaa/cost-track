@@ -106,9 +106,9 @@ export function QuickAddSheet() {
             <button className="min-h-32 rounded-2xl border p-5 text-left transition hover:border-primary" onClick={() => setMode("manual")} type="button"><PenLine className="mb-5 size-6" /><strong className="block">Input Manual</strong><span className="mt-1 block text-sm text-muted-foreground">Isi detail transaksi langsung.</span></button>
           </div>
         ) : mode === "ai" ? (
-          <div className="rounded-2xl border border-dashed p-7 text-center"><Bot className="mx-auto mb-3 size-8 text-primary" /><p className="font-medium">Smart Input segera siap.</p><p className="mt-1 text-sm text-muted-foreground">Untuk sekarang, input manual tetap dapat digunakan.</p><button className="mt-5 h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground" onClick={() => setMode("manual")} type="button">Buka input manual</button></div>
+          <SmartInputForm onResult={(draft) => { setEditing(draft); setMode("manual"); }} onManual={() => setMode("manual")} />
         ) : (
-          <ManualForm key={editing?.id ?? "new"} accounts={accounts} categories={categories} defaultAccount={defaultAccount} editing={editing} pending={pending} onSubmit={save} />
+          <ManualForm key={editing ? `${editing.id ?? "ai"}-${editing.description}` : "new"} accounts={accounts} categories={categories} defaultAccount={defaultAccount} editing={editing} pending={pending} onSubmit={save} />
         )}
       </section>
     </div>
@@ -120,6 +120,7 @@ function ManualForm({ accounts, categories, defaultAccount, editing, pending, on
   const visibleCategories = categories.filter((item) => item.type === type);
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
+      {editing?.source === "AI" && !editing.id ? <div className="flex gap-3 rounded-xl bg-primary/10 p-3 text-sm"><Sparkles className="mt-0.5 size-4 shrink-0 text-primary" /><p><strong className="block">Hasil analisis AI</strong><span className="text-muted-foreground">Periksa dan edit detail sebelum menyimpan.</span></p></div> : null}
       <fieldset><legend className="mb-2 text-sm font-medium">Jenis</legend><div className="grid grid-cols-2 rounded-xl bg-muted p-1">{(["EXPENSE", "INCOME"] as const).map((value) => <label key={value} className={`flex h-10 cursor-pointer items-center justify-center rounded-lg text-sm font-semibold ${type === value ? "bg-card shadow-sm" : "text-muted-foreground"}`}><input className="sr-only" type="radio" name="type" value={value} checked={type === value} onChange={() => setType(value)} />{value === "EXPENSE" ? "− Pengeluaran" : "+ Pemasukan"}</label>)}</div></fieldset>
       <Field label="Nominal"><input className="h-12 w-full rounded-xl border bg-background px-3 text-lg font-semibold" inputMode="numeric" name="amount" defaultValue={editing?.amount} placeholder="18.000" required /></Field>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -131,6 +132,20 @@ function ManualForm({ accounts, categories, defaultAccount, editing, pending, on
       <button className="tap-target flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 font-semibold text-primary-foreground disabled:opacity-60" disabled={pending || !accounts.length || !visibleCategories.length} type="submit">{pending ? <LoaderCircle className="size-4 animate-spin" /> : null}{pending ? "Menyimpan..." : "Simpan transaksi"}</button>
     </form>
   );
+}
+
+function SmartInputForm({ onResult, onManual }: { onResult: (draft: EditableTransaction) => void; onManual: () => void }) {
+  const [text, setText] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  async function analyze(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setPending(true); setError("");
+    const response = await fetch("/api/ai/smart-input", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+    const body = await response.json().catch(() => null); setPending(false);
+    if (!response.ok) { setError(body?.error ?? "AI sedang tidak tersedia. Kamu masih bisa mencatat transaksi secara manual."); return; }
+    onResult(body);
+  }
+  return <form className="space-y-4" onSubmit={analyze}><div className="rounded-2xl bg-primary/10 p-4"><div className="flex items-center gap-2 text-sm font-semibold text-primary"><Bot className="size-4" />Smart Input</div><p className="mt-2 text-sm text-muted-foreground">Tulis transaksi dengan bahasa sehari-hari. Tidak ada transaksi yang disimpan sebelum kamu meninjau hasilnya.</p></div><label className="block space-y-2 text-sm font-medium"><span>Transaksimu</span><textarea className="min-h-28 w-full resize-none rounded-2xl border bg-background p-3" value={text} onChange={(event) => setText(event.target.value)} minLength={2} maxLength={300} required autoFocus placeholder="Contoh: kemarin ayam geprek 18k pakai cash" /></label>{error ? <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive" role="alert">{error}</p> : null}<button className="tap-target flex w-full items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-primary-foreground disabled:opacity-60" disabled={pending || text.trim().length < 2}>{pending ? <LoaderCircle className="size-4 animate-spin" /> : <Sparkles className="size-4" />}{pending ? "Menganalisis transaksi..." : "Analisis transaksi"}</button><button className="tap-target w-full rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted" type="button" onClick={onManual}>Gunakan input manual</button></form>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block space-y-2 text-sm font-medium"><span>{label}</span>{children}</label>; }
