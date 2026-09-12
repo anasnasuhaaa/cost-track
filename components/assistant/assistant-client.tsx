@@ -28,7 +28,7 @@ export function AssistantClient() {
   }
 
   return (
-    <section className="flex min-h-[calc(100dvh-12rem)] flex-col overflow-hidden rounded-2xl border bg-card shadow-sm lg:min-h-[calc(100dvh-10rem)]">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
       <div className="flex items-center gap-3 border-b bg-primary/[0.04] px-4 py-3 sm:px-6">
         <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground"><Sparkles className="size-4" /></span>
         <div><p className="text-sm font-semibold">Cost Track Assistant</p><p className="text-xs text-muted-foreground">Terhubung dengan data keuanganmu</p></div>
@@ -38,7 +38,7 @@ export function AssistantClient() {
         {pending ? <div className="flex max-w-[94%] items-start gap-2"><span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><Bot className="size-4" /></span><div className="w-64 space-y-2 rounded-2xl rounded-tl-sm border bg-background p-4"><Skeleton className="h-3 w-4/5" /><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-3/5" /><span className="sr-only">Menganalisis pertanyaan dan menghitung data...</span></div></div> : null}
         {error ? <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive" role="alert">{error}</p> : null}
       </div>
-      <form className="sticky bottom-0 border-t bg-card/95 p-3 backdrop-blur sm:p-4" onSubmit={(event) => { event.preventDefault(); void ask(question); }}><div className="flex gap-2"><label className="sr-only" htmlFor="assistant-question">Pertanyaan keuangan</label><Input id="assistant-question" className="h-12 min-w-0 flex-1" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={300} placeholder="Tanya kondisi keuanganmu..." /><Button className="size-12 shrink-0" disabled={pending || question.trim().length < 3} size="icon" type="submit" aria-label="Kirim pertanyaan"><Send /></Button></div><p className="mt-2 px-1 text-[11px] text-muted-foreground">Assistant dapat keliru memahami konteks. Periksa kembali keputusan finansial penting.</p></form>
+      <form className="sticky bottom-0 border-t bg-background/95 p-3 backdrop-blur sm:p-4" onSubmit={(event) => { event.preventDefault(); void ask(question); }}><div className="flex gap-2"><label className="sr-only" htmlFor="assistant-question">Pertanyaan keuangan</label><Input id="assistant-question" className="h-12 min-w-0 flex-1" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={300} placeholder="Tanya kondisi keuanganmu..." /><Button className="size-12 shrink-0" disabled={pending || question.trim().length < 3} size="icon" type="submit" aria-label="Kirim pertanyaan"><Send /></Button></div><p className="mt-2 px-1 text-[11px] text-muted-foreground">Assistant dapat keliru memahami konteks. Periksa kembali keputusan finansial penting.</p></form>
     </section>
   );
 }

@@ -3,7 +3,7 @@ import "server-only";
 import { and, count, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { category, financeAccount, financeTransaction } from "@/db/schema";
+import { category, categoryPreference, financeAccount, financeTransaction } from "@/db/schema";
 import { transactionFiltersSchema } from "./validation";
 
 export async function listAccounts(userId: string, includeArchived = false) {
@@ -29,13 +29,28 @@ export async function listAccounts(userId: string, includeArchived = false) {
 }
 
 export async function listCategories(userId: string, includeArchived = false) {
+  const displayName = sql<string>`coalesce(${categoryPreference.name}, ${category.name})`;
+  const archived = sql<boolean>`coalesce(${categoryPreference.isArchived}, ${category.isArchived})`;
+
   return db
-    .select()
+    .select({
+      id: category.id,
+      userId: category.userId,
+      name: displayName,
+      type: category.type,
+      icon: category.icon,
+      systemKey: category.systemKey,
+      isSystem: category.isSystem,
+      isArchived: archived,
+      createdAt: category.createdAt,
+      updatedAt: category.updatedAt,
+    })
     .from(category)
+    .leftJoin(categoryPreference, and(eq(categoryPreference.categoryId, category.id), eq(categoryPreference.userId, userId)))
     .where(
       and(
         or(eq(category.isSystem, true), eq(category.userId, userId)),
-        includeArchived ? undefined : eq(category.isArchived, false),
+        includeArchived ? undefined : eq(archived, false),
       ),
     )
     .orderBy(category.type, desc(category.isSystem), category.name);
@@ -52,6 +67,7 @@ export async function listTransactions(userId: string, rawFilters: Record<string
   if (filters.to) conditions.push(lte(financeTransaction.transactionDate, filters.to));
   const where = and(...conditions);
   const offset = (filters.page - 1) * filters.pageSize;
+  const categoryName = sql<string>`coalesce(${categoryPreference.name}, ${category.name})`;
 
   const [items, totalResult] = await Promise.all([
     db
@@ -65,11 +81,12 @@ export async function listTransactions(userId: string, rawFilters: Record<string
         accountId: financeTransaction.accountId,
         accountName: financeAccount.name,
         categoryId: financeTransaction.categoryId,
-        categoryName: category.name,
+        categoryName,
       })
       .from(financeTransaction)
       .innerJoin(financeAccount, eq(financeTransaction.accountId, financeAccount.id))
       .innerJoin(category, eq(financeTransaction.categoryId, category.id))
+      .leftJoin(categoryPreference, and(eq(categoryPreference.categoryId, category.id), eq(categoryPreference.userId, userId)))
       .where(where)
       .orderBy(desc(financeTransaction.transactionDate), desc(financeTransaction.createdAt))
       .limit(filters.pageSize)

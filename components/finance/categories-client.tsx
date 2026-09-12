@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Archive, MoreHorizontal, Pencil, Plus, Shapes, TrendingDown, TrendingUp } from "lucide-react";
+import { MoreHorizontal, Pencil, Plus, Shapes, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -79,7 +79,8 @@ export function CategoriesClient() {
     });
     setBusy(false);
     if (!response.ok) {
-      toast.error("Kategori sistem tidak dapat diubah.");
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal memperbarui kategori.");
       return;
     }
     toast.success("Kategori diperbarui.");
@@ -93,10 +94,11 @@ export function CategoriesClient() {
     const response = await fetch(`/api/categories/${archiveCandidate.id}`, { method: "DELETE" });
     setBusy(false);
     if (!response.ok) {
-      toast.error("Kategori sistem tidak dapat diarsipkan.");
+      const body = await response.json().catch(() => null);
+      toast.error(body?.error ?? "Gagal menghapus kategori.");
       return;
     }
-    toast.success("Kategori diarsipkan.");
+    toast.success("Kategori dihapus.");
     setArchiveCandidate(null);
     void load();
   }
@@ -151,8 +153,8 @@ export function CategoriesClient() {
 
       <AlertDialog open={Boolean(archiveCandidate)} onOpenChange={(open) => { if (!open) setArchiveCandidate(null); }}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogMedia className="bg-destructive/10 text-destructive"><Archive /></AlertDialogMedia><AlertDialogTitle>Arsipkan kategori?</AlertDialogTitle><AlertDialogDescription>Kategori “{archiveCandidate?.name}” tidak lagi tersedia untuk transaksi baru. Riwayat yang sudah ada tetap tersimpan.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel disabled={busy}>Batal</AlertDialogCancel><AlertDialogAction disabled={busy} variant="destructive" onClick={() => void archive()}>Arsipkan</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogMedia className="bg-destructive/10 text-destructive"><Trash2 /></AlertDialogMedia><AlertDialogTitle>Hapus kategori?</AlertDialogTitle><AlertDialogDescription>Kategori “{archiveCandidate?.name}” tidak lagi tersedia untuk transaksi baru. Riwayat yang sudah ada tetap tersimpan.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel disabled={busy}>Batal</AlertDialogCancel><AlertDialogAction disabled={busy} variant="destructive" onClick={() => void archive()}>Hapus</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
@@ -164,15 +166,14 @@ function CategoryRow({ item, onArchive, onEdit }: { item: Category; onArchive: (
     <div className="flex min-h-14 items-center gap-3 rounded-xl border bg-background px-3 transition-colors hover:bg-muted/40">
       <span className={`grid size-9 place-items-center rounded-lg ${item.type === "INCOME" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}><Shapes className="size-4" /></span>
       <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
-      {item.isSystem ? <Badge variant="secondary">Bawaan</Badge> : (
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<Button aria-label={`Aksi untuk ${item.name}`} size="icon" variant="ghost" />}><MoreHorizontal /></DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem className="h-11" onClick={() => onEdit(item)}><Pencil /> Ubah nama</DropdownMenuItem>
-            <DropdownMenuItem className="h-11" onClick={() => onArchive(item)} variant="destructive"><Archive /> Arsipkan</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+      {item.isSystem ? <Badge variant="secondary">Bawaan</Badge> : null}
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button aria-label={`Aksi untuk ${item.name}`} size="icon" variant="ghost" />}><MoreHorizontal /></DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem className="h-11" onClick={() => onEdit(item)}><Pencil /> Ubah nama</DropdownMenuItem>
+          <DropdownMenuItem className="h-11" onClick={() => onArchive(item)} variant="destructive"><Trash2 /> Hapus</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

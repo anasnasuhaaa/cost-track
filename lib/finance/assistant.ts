@@ -3,7 +3,7 @@ import "server-only";
 import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { category, financeTransaction } from "@/db/schema";
+import { category, categoryPreference, financeTransaction } from "@/db/schema";
 import type { AssistantIntent } from "@/lib/ai/assistant";
 import { formatRupiah, jakartaToday, monthRange, previousMonth } from "./calculations";
 import { listAccounts } from "./queries";
@@ -29,6 +29,7 @@ export async function answerFinancialQuestion(userId: string, intent: AssistantI
   const suggestions = ["Pengeluaran bulan ini", "Kategori terbesar", "Bandingkan dengan bulan lalu"];
   const range = rangeFor(intent.period);
   const base = and(eq(financeTransaction.userId, userId), gte(financeTransaction.transactionDate, range.start), lte(financeTransaction.transactionDate, range.end));
+  const categoryName = sql<string>`coalesce(${categoryPreference.name}, ${category.name})`;
 
   if (intent.intent === "ACCOUNT_BALANCE") {
     const accounts = await listAccounts(userId);
@@ -53,7 +54,7 @@ export async function answerFinancialQuestion(userId: string, intent: AssistantI
 
   if (intent.intent === "TOP_CATEGORIES") {
     const [rows, totalRows] = await Promise.all([
-      db.select({ name: category.name, amount: sql<number>`sum(${financeTransaction.amount})::int`, transactionCount: count() }).from(financeTransaction).innerJoin(category, eq(financeTransaction.categoryId, category.id)).where(and(base, eq(financeTransaction.type, "EXPENSE"))).groupBy(category.id, category.name).orderBy(desc(sql`sum(${financeTransaction.amount})`)).limit(3),
+      db.select({ name: categoryName, amount: sql<number>`sum(${financeTransaction.amount})::int`, transactionCount: count() }).from(financeTransaction).innerJoin(category, eq(financeTransaction.categoryId, category.id)).leftJoin(categoryPreference, and(eq(categoryPreference.categoryId, category.id), eq(categoryPreference.userId, userId))).where(and(base, eq(financeTransaction.type, "EXPENSE"))).groupBy(category.id, category.name, categoryPreference.name).orderBy(desc(sql`sum(${financeTransaction.amount})`)).limit(3),
       db.select({ amount: sql<number>`coalesce(sum(${financeTransaction.amount}), 0)::int` }).from(financeTransaction).where(and(base, eq(financeTransaction.type, "EXPENSE"))),
     ]);
     const top = rows[0]; const total = Number(totalRows[0]?.amount ?? 0);
@@ -63,7 +64,7 @@ export async function answerFinancialQuestion(userId: string, intent: AssistantI
 
   if (intent.intent === "CATEGORY_SPENDING") {
     if (!intent.category) return { answer: "Sebutkan kategori pengeluaran yang ingin diperiksa.", suggestions };
-    const rows = await db.select({ amount: sql<number>`coalesce(sum(${financeTransaction.amount}), 0)::int`, transactionCount: count() }).from(financeTransaction).innerJoin(category, eq(financeTransaction.categoryId, category.id)).where(and(base, eq(financeTransaction.type, "EXPENSE"), eq(category.name, intent.category)));
+    const rows = await db.select({ amount: sql<number>`coalesce(sum(${financeTransaction.amount}), 0)::int`, transactionCount: count() }).from(financeTransaction).innerJoin(category, eq(financeTransaction.categoryId, category.id)).leftJoin(categoryPreference, and(eq(categoryPreference.categoryId, category.id), eq(categoryPreference.userId, userId))).where(and(base, eq(financeTransaction.type, "EXPENSE"), eq(categoryName, intent.category)));
     return { answer: `Pengeluaran ${intent.category} ${periodLabel(intent.period)}:`, metric: formatRupiah(Number(rows[0]?.amount ?? 0)), details: [`${rows[0]?.transactionCount ?? 0} transaksi`], suggestions };
   }
 

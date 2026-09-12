@@ -165,6 +165,30 @@ export const category = pgTable(
   ],
 );
 
+export const categoryPreference = pgTable(
+  "category_preference",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => category.id, { onDelete: "cascade" }),
+    name: text("name"),
+    isArchived: boolean("is_archived").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("category_preference_user_id_idx").on(table.userId),
+    uniqueIndex("category_preference_user_category_uq").on(table.userId, table.categoryId),
+  ],
+);
+
 export const financeTransaction = pgTable(
   "finance_transaction",
   {
@@ -204,4 +228,5 @@ export const financeTransaction = pgTable(
 
 export type FinanceAccount = typeof financeAccount.$inferSelect;
 export type Category = typeof category.$inferSelect;
+export type CategoryPreference = typeof categoryPreference.$inferSelect;
 export type FinanceTransaction = typeof financeTransaction.$inferSelect;

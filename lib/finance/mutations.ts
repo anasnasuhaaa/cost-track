@@ -1,9 +1,9 @@
 import "server-only";
 
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { category, financeAccount } from "@/db/schema";
+import { category, categoryPreference, financeAccount } from "@/db/schema";
 import type { TransactionInput } from "./validation";
 
 export async function validateTransactionRelations(userId: string, input: TransactionInput) {
@@ -16,10 +16,12 @@ export async function validateTransactionRelations(userId: string, input: Transa
     db
       .select({ id: category.id, type: category.type })
       .from(category)
+      .leftJoin(categoryPreference, and(eq(categoryPreference.categoryId, category.id), eq(categoryPreference.userId, userId)))
       .where(
         and(
           eq(category.id, input.categoryId),
           eq(category.isArchived, false),
+          eq(sql<boolean>`coalesce(${categoryPreference.isArchived}, false)`, false),
           or(eq(category.isSystem, true), eq(category.userId, userId)),
         ),
       )

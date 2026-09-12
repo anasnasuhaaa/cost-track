@@ -100,7 +100,7 @@ export function QuickAddSheet() {
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => { if (!nextOpen) close(); }}>
-      <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto rounded-t-2xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[calc(100%-2rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border sm:p-6">
+      <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto rounded-t-2xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:data-[side=bottom]:inset-x-auto sm:data-[side=bottom]:right-auto sm:data-[side=bottom]:bottom-auto sm:data-[side=bottom]:left-1/2 sm:data-[side=bottom]:top-1/2 sm:w-[calc(100%-2rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border sm:p-6">
         <SheetHeader className="p-0 pr-10">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary"><CircleDollarSign className="size-4" />Quick Add</div>
           <SheetTitle className="text-2xl font-bold">{title}</SheetTitle>

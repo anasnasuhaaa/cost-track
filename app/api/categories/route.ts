@@ -1,8 +1,7 @@
-import { and, eq, or } from "drizzle-orm";
-
 import { db } from "@/db";
 import { category } from "@/db/schema";
 import { apiError, unauthorized } from "@/lib/api";
+import { listCategories } from "@/lib/finance/queries";
 import { categorySchema } from "@/lib/finance/validation";
 import { getRequestUser } from "@/lib/session";
 
@@ -10,8 +9,7 @@ export async function GET() {
   const user = await getRequestUser();
   if (!user) return unauthorized();
   try {
-    const rows = await db.select().from(category).where(and(eq(category.isArchived, false), or(eq(category.isSystem, true), eq(category.userId, user.id)))).orderBy(category.type, category.name);
-    return Response.json(rows, { headers: { "Cache-Control": "no-store" } });
+    return Response.json(await listCategories(user.id), { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return apiError(error);
   }

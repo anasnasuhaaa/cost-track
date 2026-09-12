@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bot, ChartPie, ChevronRight, CircleDollarSign, FolderKanban, Landmark, LogOut, Menu, Plus, ReceiptText, Settings, UserRound, WalletCards } from "lucide-react";
+import { Bot, ChartPie, ChevronRight, CircleDollarSign, FolderKanban, Landmark, LogOut, Plus, ReceiptText, Settings, UserRound, WalletCards } from "lucide-react";
 
 import { QuickAddSheet } from "@/components/transactions/quick-add-sheet";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuLinkItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
-import { ThemeMenu } from "./theme-menu";
+import { ThemeMenu, ThemeToggle } from "./theme-menu";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: ChartPie },
@@ -25,6 +25,7 @@ function openQuickAdd() {
 export function AppShell({ children, user }: { children: React.ReactNode; user: { name: string; email: string } }) {
   const pathname = usePathname();
   const router = useRouter();
+  const isAssistant = pathname === "/assistant";
 
   async function logout() {
     await authClient.signOut();
@@ -69,11 +70,9 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
             <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground"><Landmark className="size-4" /></span>
             Cost Track
           </Link>
-          <Link href="/settings" className="grid size-10 place-items-center rounded-full bg-card text-sm font-semibold text-primary shadow-sm ring-1 ring-border" aria-label="Buka pengaturan">
-            {user.name.slice(0, 1).toUpperCase()}
-          </Link>
+          <ThemeToggle />
         </header>
-        <main id="main-content" className="safe-bottom mx-auto min-h-[calc(100dvh-3.75rem)] max-w-[1440px] lg:min-h-dvh lg:pb-8">{children}</main>
+        <main id="main-content" className={isAssistant ? "h-[calc(100dvh-3.75rem)] pb-[calc(4rem+env(safe-area-inset-bottom))] lg:h-dvh lg:pb-0" : "safe-bottom mx-auto min-h-[calc(100dvh-3.75rem)] max-w-[1440px] lg:min-h-dvh lg:pb-8"}>{children}</main>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-background/92 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgb(3_4_94_/_0.08)] backdrop-blur-xl lg:hidden" aria-label="Navigasi bawah">
@@ -86,13 +85,13 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
         <MobileLink href="/assistant" label="Assistant" icon={Bot} active={pathname === "/assistant"} />
         <DropdownMenu>
           <DropdownMenuTrigger className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium outline-none ${["/accounts", "/categories", "/settings"].includes(pathname) ? "text-primary" : "text-muted-foreground"}`}>
-            <Menu className="size-5" /><span>Lainnya</span>
+            <UserRound className="size-5" /><span>Profil</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="top" sideOffset={10} className="mb-[env(safe-area-inset-bottom)] min-w-52 p-2">
-            <DropdownMenuLabel>Navigasi lainnya</DropdownMenuLabel>
-            <DropdownMenuItem className="h-11 gap-3" render={<Link href="/accounts" />}><WalletCards />Akun<ChevronRight className="ml-auto" /></DropdownMenuItem>
-            <DropdownMenuItem className="h-11 gap-3" render={<Link href="/categories" />}><FolderKanban />Kategori<ChevronRight className="ml-auto" /></DropdownMenuItem>
-            <DropdownMenuItem className="h-11 gap-3" render={<Link href="/settings" />}><Settings />Pengaturan<ChevronRight className="ml-auto" /></DropdownMenuItem>
+            <DropdownMenuLabel><span className="block truncate text-foreground">{user.name}</span><span className="block truncate font-normal">{user.email}</span></DropdownMenuLabel>
+            <DropdownMenuLinkItem className="h-11 gap-3" render={<Link href="/accounts" />}><WalletCards />Akun<ChevronRight className="ml-auto" /></DropdownMenuLinkItem>
+            <DropdownMenuLinkItem className="h-11 gap-3" render={<Link href="/categories" />}><FolderKanban />Kategori<ChevronRight className="ml-auto" /></DropdownMenuLinkItem>
+            <DropdownMenuLinkItem className="h-11 gap-3" render={<Link href="/settings" />}><Settings />Pengaturan<ChevronRight className="ml-auto" /></DropdownMenuLinkItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="h-11 gap-3" variant="destructive" onClick={logout}><LogOut />Keluar</DropdownMenuItem>
           </DropdownMenuContent>
