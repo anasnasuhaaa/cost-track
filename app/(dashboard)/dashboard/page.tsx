@@ -23,18 +23,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <PageHeader
         eyebrow={`Halo, ${user.name.split(" ")[0]}`}
         title="Ringkasan keuangan"
-        description="Pantau saldo dan kebiasaan pengeluaranmu dalam sekali lihat."
         action={<PeriodSelector period={data.period} />}
       />
 
-      <section className="relative overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground shadow-lg shadow-primary/15 sm:p-7">
+      <section className="balance-card relative overflow-hidden rounded-2xl p-5 sm:p-7">
         <div className="pointer-events-none absolute -right-14 -top-20 size-52 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-20 right-20 size-40 rounded-full bg-accent/15" />
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-primary-foreground/75">Total saldo</p>
+            <p className="text-sm font-medium text-white/75">Total saldo</p>
             <p className="mt-2 font-heading text-3xl font-bold tracking-tight sm:text-4xl">{formatRupiah(data.balance)}</p>
-            <p className="mt-3 text-xs text-primary-foreground/65">Saldo awal + pemasukan − pengeluaran</p>
           </div>
                 <QuickAddButton inverse />
         </div>
@@ -52,7 +50,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <CardHeader className="border-b sm:grid-cols-[1fr_auto]">
           <div>
             <CardTitle className="text-lg">Transaksi terbaru</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Aktivitas keuangan paling baru</p>
           </div>
           <Button className="hidden sm:inline-flex" variant="ghost" render={<Link href="/transactions" />}>
             Lihat semua <ArrowRight className="size-4" />

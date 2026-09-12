@@ -7,5 +7,5 @@ import { QuickAddButton } from "@/components/transactions/quick-add-button";
 export const metadata: Metadata = { title: "Transaksi" };
 
 export default function TransactionsPage() {
-  return <div className="page-container"><PageHeader eyebrow="Riwayat" title="Transaksi" description="Cari, filter, edit, dan kelola semua pemasukan serta pengeluaranmu." action={<QuickAddButton />} /><TransactionsClient /></div>;
+  return <div className="page-container"><PageHeader eyebrow="Riwayat" title="Transaksi" action={<QuickAddButton />} /><TransactionsClient /></div>;
 }

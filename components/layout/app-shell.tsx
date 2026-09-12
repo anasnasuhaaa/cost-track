@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bot, ChartPie, ChevronRight, CircleDollarSign, FolderKanban, Landmark, LogOut, Plus, ReceiptText, Settings, UserRound, WalletCards } from "lucide-react";
+import { Bot, ChartPie, ChevronRight, CircleDollarSign, CircleEllipsis, FolderKanban, Landmark, LogOut, Plus, ReceiptText, Settings, UserRound, WalletCards } from "lucide-react";
 
 import { QuickAddSheet } from "@/components/transactions/quick-add-sheet";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,6 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
           <span>Cost Track</span>
         </Link>
 
-        <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Menu utama</p>
         <nav className="space-y-1" aria-label="Navigasi utama">
           {navigation.map((item) => <NavLink key={item.href} {...item} active={pathname === item.href} />)}
         </nav>
@@ -75,7 +74,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
         <main id="main-content" className={isAssistant ? "h-[calc(100dvh-3.75rem)] pb-[calc(4rem+env(safe-area-inset-bottom))] lg:h-dvh lg:pb-0" : "safe-bottom mx-auto min-h-[calc(100dvh-3.75rem)] max-w-[1440px] lg:min-h-dvh lg:pb-8"}>{children}</main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-background/92 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgb(3_4_94_/_0.08)] backdrop-blur-xl lg:hidden" aria-label="Navigasi bawah">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-background/92 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgb(76_29_149_/_0.10)] backdrop-blur-xl lg:hidden" aria-label="Navigasi bawah">
         <MobileLink href="/dashboard" label="Home" icon={ChartPie} active={pathname === "/dashboard"} />
         <MobileLink href="/transactions" label="Transaksi" icon={ReceiptText} active={pathname === "/transactions"} />
         <Button className="relative h-auto min-h-16 flex-col items-center justify-center gap-1 rounded-none text-xs font-semibold text-primary hover:bg-transparent hover:text-primary" onClick={openQuickAdd} type="button" aria-label="Tambah transaksi" variant="ghost">
@@ -85,7 +84,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
         <MobileLink href="/assistant" label="Assistant" icon={Bot} active={pathname === "/assistant"} />
         <DropdownMenu>
           <DropdownMenuTrigger className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg text-[11px] font-medium outline-none ${["/accounts", "/categories", "/settings"].includes(pathname) ? "text-primary" : "text-muted-foreground"}`}>
-            <UserRound className="size-5" /><span>Profil</span>
+            <CircleEllipsis className="size-5" /><span>Lainnya</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="top" sideOffset={10} className="mb-[env(safe-area-inset-bottom)] min-w-52 p-2">
             <DropdownMenuGroup>

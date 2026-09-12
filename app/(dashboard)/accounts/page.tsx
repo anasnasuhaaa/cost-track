@@ -7,4 +7,4 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Akun" };
-export default function AccountsPage() { return <div className="page-container"><PageHeader eyebrow="Sumber dana" title="Akun keuangan" description="Pantau saldo cash, rekening bank, dan e-wallet dari satu tempat." action={<Button render={<Link href="/categories" />} variant="outline"><Tags />Kelola kategori</Button>} /><AccountsClient /></div>; }
+export default function AccountsPage() { return <div className="page-container"><PageHeader eyebrow="Sumber dana" title="Akun keuangan" action={<Button render={<Link href="/categories" />} variant="outline"><Tags />Kelola kategori</Button>} /><AccountsClient /></div>; }

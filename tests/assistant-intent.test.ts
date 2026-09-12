@@ -12,12 +12,31 @@ describe("assistant intent whitelist", () => {
     ["bandingkan bulan ini dan bulan lalu", "PERIOD_COMPARISON"],
     ["berapa saldo BCA?", "ACCOUNT_BALANCE"],
     ["tampilkan transaksi terbaru", "RECENT_TRANSACTIONS"],
+    ["berapa pengeluaran hari ini?", "EXPENSE_TOTAL"],
+    ["berapa pengeluaran selama 3 hari ke belakang?", "EXPENSE_TOTAL"],
+    ["pemasukan kemarin", "INCOME_TOTAL"],
+    ["pengeluaran 7 hari terakhir", "EXPENSE_TOTAL"],
+    ["sisa uang saya berapa?", "ACCOUNT_BALANCE"],
+    ["uang paling banyak habis untuk apa?", "TOP_CATEGORIES"],
+    ["gimana kondisi keuangan saya?", "CURRENT_MONTH_SUMMARY"],
+    ["tampilkan riwayat transaksi", "RECENT_TRANSACTIONS"],
   ])("classifies %s", (question, expected) => {
     expect(classifyLocally(question, context).intent).toBe(expected);
   });
 
   it("rejects arbitrary intents", () => {
     expect(() => assistantIntentSchema.parse({ intent: "RAW_SQL", period: "CURRENT_MONTH", category: null, account: null })).toThrow();
+  });
+
+  it.each([
+    ["berapa pengeluaran hari ini?", "TODAY"],
+    ["berapa pengeluaran selama 3 hari ke belakang?", "LAST_3_DAYS"],
+    ["pemasukan kemarin", "YESTERDAY"],
+    ["pengeluaran 7 hari terakhir", "LAST_7_DAYS"],
+    ["pengeluaran minggu ini", "CURRENT_WEEK"],
+    ["pengeluaran sepekan terakhir", "LAST_7_DAYS"],
+  ])("detects the period in %s", (question, expected) => {
+    expect(classifyLocally(question, context).period).toBe(expected);
   });
 
   it("marks unsupported requests instead of expanding capability", () => {

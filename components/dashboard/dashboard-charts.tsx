@@ -4,7 +4,7 @@ import type { TooltipContentProps } from "recharts";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartNoAxesColumnIncreasing } from "lucide-react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatRupiah } from "@/lib/finance/calculations";
 
 const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
@@ -12,7 +12,7 @@ const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--cha
 export function DashboardCharts({ daily, categories }: { daily: { date: string; amount: number }[]; categories: { name: string; amount: number }[] }) {
   return (
     <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
-      <ChartCard title="Pengeluaran harian" description="Ritme pengeluaran selama periode ini">
+      <ChartCard title="Pengeluaran harian">
         {daily.length ? (
           <div className="h-64 w-full sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -28,7 +28,7 @@ export function DashboardCharts({ daily, categories }: { daily: { date: string; 
         ) : <ChartEmpty />}
       </ChartCard>
 
-      <ChartCard title="Kategori terbesar" description="Distribusi pengeluaranmu">
+      <ChartCard title="Kategori terbesar">
         {categories.length ? (
           <div className="grid items-center gap-4 sm:grid-cols-[190px_1fr] xl:grid-cols-1">
             <div className="mx-auto h-44 w-44">
@@ -57,8 +57,8 @@ export function DashboardCharts({ daily, categories }: { daily: { date: string; 
   );
 }
 
-function ChartCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
-  return <Card><CardHeader><CardTitle className="text-lg">{title}</CardTitle><CardDescription>{description}</CardDescription></CardHeader><CardContent>{children}</CardContent></Card>;
+function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return <Card><CardHeader><CardTitle className="text-lg">{title}</CardTitle></CardHeader><CardContent>{children}</CardContent></Card>;
 }
 
 function TooltipShell({ label, value }: { label: string; value: number }) {
