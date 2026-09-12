@@ -38,7 +38,7 @@ BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:3000
 SIGNUP_ENABLED=true
 GEMINI_API_KEY=
-GEMINI_MODEL=
+GEMINI_MODEL=gemini-3.5-flash-lite
 ```
 
 Buat `BETTER_AUTH_SECRET` yang acak dan kuat (minimal 32 karakter). `DATABASE_URL`, `BETTER_AUTH_SECRET`, serta `GEMINI_API_KEY` hanya digunakan di server.
@@ -73,7 +73,7 @@ Migration berada di folder `drizzle/`. Buat migration baru setelah perubahan sch
 
 Dapatkan API key sendiri dari [Google AI Studio](https://aistudio.google.com/) lalu simpan di `GEMINI_API_KEY` pada environment lokal/Vercel. Jangan mengirim atau menaruh key di source code.
 
-Isi `GEMINI_MODEL` dengan model Gemini Developer API yang mendukung structured output. Model sengaja tidak di-hardcode agar dapat diganti tanpa perubahan source. Integrasi menggunakan Interactions API, mengirim hanya teks transaksi/pertanyaan beserta konteks nama minimum, dan menggunakan `store: false`.
+Gunakan `gemini-3.5-flash-lite` pada `GEMINI_MODEL`; model ini aktif untuk pengguna baru, hemat, dan mendukung structured output. Nilainya tetap berada di environment agar dapat diganti tanpa perubahan source bila model perlu dimigrasikan lagi. Integrasi menggunakan endpoint `generateContent` untuk permintaan ekstraksi satu kali dan hanya mengirim teks transaksi/pertanyaan beserta konteks nama minimum.
 
 Tanpa key/model atau saat provider error, transaksi manual tetap berfungsi. Test suite menggunakan mock dan tidak memanggil Gemini live.
 

@@ -1,9 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, LoaderCircle, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Plus, ReceiptText, Search, SlidersHorizontal, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatRupiah } from "@/lib/finance/calculations";
 
 type Transaction = { id: string; type: "INCOME" | "EXPENSE"; amount: number; description: string; transactionDate: string; source: "MANUAL" | "AI"; accountId: string; accountName: string; categoryId: string; categoryName: string };
@@ -22,6 +30,9 @@ export function TransactionsClient() {
   const [categories, setCategories] = useState<FilterOption[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState<Transaction | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -36,8 +47,11 @@ export function TransactionsClient() {
       const response = await fetch(`/api/transactions?${params}`, { cache: "no-store" });
       if (!response.ok) throw new Error();
       setResult(await response.json());
-    } catch { toast.error("Daftar transaksi gagal dimuat."); }
-    finally { setLoading(false); }
+    } catch {
+      toast.error("Daftar transaksi gagal dimuat.");
+    } finally {
+      setLoading(false);
+    }
   }, [accountId, categoryId, from, page, search, to, type]);
 
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
@@ -56,11 +70,17 @@ export function TransactionsClient() {
     return () => window.removeEventListener("cost-track:transactions-changed", refresh);
   }, [load]);
 
-  async function remove(item: Transaction) {
-    if (!window.confirm(`Hapus transaksi “${item.description}”?`)) return;
-    const response = await fetch(`/api/transactions/${item.id}`, { method: "DELETE" });
-    if (!response.ok) { toast.error("Gagal menghapus transaksi."); return; }
-    toast.success("Transaksi berhasil dihapus");
+  async function remove() {
+    if (!deleteCandidate) return;
+    setDeleting(true);
+    const response = await fetch(`/api/transactions/${deleteCandidate.id}`, { method: "DELETE" });
+    setDeleting(false);
+    if (!response.ok) {
+      toast.error("Gagal menghapus transaksi.");
+      return;
+    }
+    setDeleteCandidate(null);
+    toast.success("Transaksi berhasil dihapus.");
     void load();
   }
 
@@ -68,30 +88,106 @@ export function TransactionsClient() {
     window.dispatchEvent(new CustomEvent("cost-track:quick-add", { detail: item }));
   }
 
+  function resetFilters() {
+    setType(""); setAccountId(""); setCategoryId(""); setFrom(""); setTo(""); setPage(1);
+  }
+
+  const typeItems = [{ value: "", label: "Semua jenis" }, { value: "EXPENSE", label: "Pengeluaran" }, { value: "INCOME", label: "Pemasukan" }];
+  const categoryItems = [{ value: "", label: "Semua kategori" }, ...categories.map((item) => ({ value: item.id, label: item.name }))];
+  const accountItems = [{ value: "", label: "Semua akun" }, ...accounts.map((item) => ({ value: item.id, label: item.name }))];
+  const activeFilters = [type, accountId, categoryId, from, to].filter(Boolean).length;
+
   return (
     <div className="space-y-5">
-      <div className="space-y-3 rounded-2xl border bg-card p-3">
-        <div className="grid gap-3 sm:grid-cols-[1fr_180px_auto]">
-          <label className="relative"><span className="sr-only">Cari transaksi</span><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><input className="h-11 w-full rounded-xl border bg-background pl-9 pr-3" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Cari deskripsi..." /></label>
-          <select className="h-11 rounded-xl border bg-background px-3" aria-label="Filter jenis" value={type} onChange={(event) => { setType(event.target.value); setPage(1); }}><option value="">Semua jenis</option><option value="EXPENSE">Pengeluaran</option><option value="INCOME">Pemasukan</option></select>
-          <button className="hidden h-11 items-center gap-2 rounded-xl bg-primary px-4 font-semibold text-primary-foreground sm:flex" onClick={() => window.dispatchEvent(new CustomEvent("cost-track:quick-add"))} type="button"><Plus className="size-4" />Tambah</button>
+      <section className="surface-card space-y-3 p-3 sm:p-4">
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_190px_auto_auto]">
+          <label className="relative"><span className="sr-only">Cari transaksi</span><Search className="absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="h-11 bg-background pl-9" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Cari deskripsi..." /></label>
+          <Select value={type} onValueChange={(value) => { setType(value ?? ""); setPage(1); }} items={typeItems}>
+            <SelectTrigger className="h-11 w-full bg-background px-3"><SelectValue /></SelectTrigger>
+            <SelectContent>{typeItems.map((item) => <SelectItem key={item.value || "all"} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+          </Select>
+          <Button variant="outline" onClick={() => setFiltersOpen((value) => !value)} type="button"><SlidersHorizontal />Filter{activeFilters ? <Badge className="ml-1 h-5 min-w-5 px-1.5">{activeFilters}</Badge> : null}</Button>
+          <Button className="hidden sm:inline-flex" onClick={() => window.dispatchEvent(new CustomEvent("cost-track:quick-add"))} type="button"><Plus />Tambah</Button>
         </div>
-        <details className="group"><summary className="tap-target flex cursor-pointer list-none items-center text-sm font-medium text-muted-foreground">Filter lanjutan <span className="ml-auto text-xs group-open:hidden">Buka</span><span className="ml-auto hidden text-xs group-open:inline">Tutup</span></summary><div className="grid gap-3 border-t pt-3 sm:grid-cols-2 xl:grid-cols-4"><select className="h-11 rounded-xl border bg-background px-3 text-sm" value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(1); }} aria-label="Filter kategori"><option value="">Semua kategori</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select className="h-11 rounded-xl border bg-background px-3 text-sm" value={accountId} onChange={(event) => { setAccountId(event.target.value); setPage(1); }} aria-label="Filter akun"><option value="">Semua akun</option>{accounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><label className="space-y-1 text-xs text-muted-foreground"><span>Dari tanggal</span><input className="h-11 w-full rounded-xl border bg-background px-3 text-sm text-foreground" type="date" value={from} onChange={(event) => { setFrom(event.target.value); setPage(1); }} /></label><label className="space-y-1 text-xs text-muted-foreground"><span>Sampai tanggal</span><input className="h-11 w-full rounded-xl border bg-background px-3 text-sm text-foreground" type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(1); }} /></label></div></details>
-      </div>
 
-      {loading ? <LoadingRows /> : result.items.length === 0 ? <div className="rounded-2xl border border-dashed bg-card px-5 py-16 text-center"><ReceiptEmpty /><h2 className="font-heading text-lg font-semibold">Belum ada transaksi yang sesuai.</h2><p className="mt-1 text-sm text-muted-foreground">Ubah filter atau catat transaksi pertamamu.</p></div> : (
+        {filtersOpen ? (
+          <div className="grid gap-3 border-t pt-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Select value={categoryId} onValueChange={(value) => { setCategoryId(value ?? ""); setPage(1); }} items={categoryItems}>
+              <SelectTrigger className="h-11 w-full bg-background px-3"><SelectValue /></SelectTrigger>
+              <SelectContent>{categoryItems.map((item) => <SelectItem key={item.value || "all"} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+            </Select>
+            <Select value={accountId} onValueChange={(value) => { setAccountId(value ?? ""); setPage(1); }} items={accountItems}>
+              <SelectTrigger className="h-11 w-full bg-background px-3"><SelectValue /></SelectTrigger>
+              <SelectContent>{accountItems.map((item) => <SelectItem key={item.value || "all"} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+            </Select>
+            <DatePicker ariaLabel="Filter dari tanggal" placeholder="Dari tanggal" value={from} onChange={(value) => { setFrom(value); setPage(1); }} />
+            <DatePicker ariaLabel="Filter sampai tanggal" placeholder="Sampai tanggal" value={to} onChange={(value) => { setTo(value); setPage(1); }} />
+            {activeFilters ? <Button className="sm:col-span-2 xl:col-span-4 xl:justify-self-end" variant="ghost" onClick={resetFilters} type="button">Reset semua filter</Button> : null}
+          </div>
+        ) : null}
+      </section>
+
+      {loading ? <LoadingRows /> : result.items.length === 0 ? (
+        <div className="surface-card border-dashed px-5 py-14 text-center">
+          <span className="mx-auto grid size-12 place-items-center rounded-xl bg-primary/10 text-primary"><ReceiptText className="size-6" /></span>
+          <h2 className="mt-4 font-heading text-lg font-semibold">Belum ada transaksi yang sesuai</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Ubah filter atau catat transaksi pertamamu.</p>
+          <Button className="mt-5" onClick={() => window.dispatchEvent(new CustomEvent("cost-track:quick-add"))}><Plus />Tambah transaksi</Button>
+        </div>
+      ) : (
         <>
-          <div className="space-y-3 md:hidden">{result.items.map((item) => <TransactionCard key={item.id} item={item} onEdit={() => edit(item)} onDelete={() => remove(item)} />)}</div>
-          <div className="hidden overflow-hidden rounded-2xl border bg-card md:block"><table className="w-full text-left text-sm"><thead className="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="px-5 py-4">Transaksi</th><th className="px-5 py-4">Akun</th><th className="px-5 py-4">Tanggal</th><th className="px-5 py-4 text-right">Nominal</th><th className="w-24 px-5 py-4"><span className="sr-only">Aksi</span></th></tr></thead><tbody className="divide-y">{result.items.map((item) => <tr key={item.id} className="hover:bg-muted/30"><td className="px-5 py-4"><strong className="block font-medium">{item.description}</strong><span className="text-xs text-muted-foreground">{item.categoryName} · {item.source === "AI" ? "AI" : "Manual"}</span></td><td className="px-5 py-4 text-muted-foreground">{item.accountName}</td><td className="px-5 py-4 text-muted-foreground">{formatDate(item.transactionDate)}</td><td className={`px-5 py-4 text-right font-semibold ${item.type === "INCOME" ? "text-emerald-600 dark:text-emerald-400" : ""}`}>{item.type === "INCOME" ? "+" : "−"}{formatRupiah(item.amount)}</td><td className="px-5 py-4"><div className="flex justify-end"><IconButton label="Edit" onClick={() => edit(item)}><Pencil /></IconButton><IconButton label="Hapus" onClick={() => remove(item)} destructive><Trash2 /></IconButton></div></td></tr>)}</tbody></table></div>
+          <div className="space-y-3 md:hidden">{result.items.map((item) => <TransactionCard key={item.id} item={item} onEdit={() => edit(item)} onDelete={() => setDeleteCandidate(item)} />)}</div>
+          <div className="surface-card hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[860px] text-left text-sm">
+              <thead className="border-b bg-muted/55 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><tr><th className="px-5 py-3.5">Tanggal</th><th className="px-5 py-3.5">Deskripsi</th><th className="px-5 py-3.5">Kategori</th><th className="px-5 py-3.5">Akun</th><th className="px-5 py-3.5">Sumber</th><th className="px-5 py-3.5 text-right">Nominal</th><th className="w-16 px-4 py-3.5"><span className="sr-only">Aksi</span></th></tr></thead>
+              <tbody className="divide-y">{result.items.map((item) => (
+                <tr key={item.id} className="transition hover:bg-muted/35">
+                  <td className="whitespace-nowrap px-5 py-4 text-muted-foreground">{formatDate(item.transactionDate)}</td>
+                  <td className="max-w-56 px-5 py-4 font-semibold"><span className="block truncate">{item.description}</span></td>
+                  <td className="px-5 py-4 text-muted-foreground">{item.categoryName}</td>
+                  <td className="px-5 py-4 text-muted-foreground">{item.accountName}</td>
+                  <td className="px-5 py-4"><Badge variant={item.source === "AI" ? "default" : "secondary"}>{item.source === "AI" ? <Sparkles /> : null}{item.source === "AI" ? "AI" : "Manual"}</Badge></td>
+                  <td className={`whitespace-nowrap px-5 py-4 text-right font-bold ${item.type === "INCOME" ? "text-success" : "text-foreground"}`}><span className="sr-only">{item.type === "INCOME" ? "Pemasukan" : "Pengeluaran"}</span>{item.type === "INCOME" ? "+" : "−"}{formatRupiah(item.amount)}</td>
+                  <td className="px-4 py-4"><ActionMenu onEdit={() => edit(item)} onDelete={() => setDeleteCandidate(item)} /></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
         </>
       )}
-      <div className="flex items-center justify-between text-sm text-muted-foreground"><span>{result.total} transaksi</span><div className="flex items-center gap-2"><button className="tap-target grid place-items-center rounded-xl border disabled:opacity-40" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} aria-label="Halaman sebelumnya"><ChevronLeft className="size-4" /></button><span>{page} / {result.pages}</span><button className="tap-target grid place-items-center rounded-xl border disabled:opacity-40" disabled={page >= result.pages} onClick={() => setPage((value) => value + 1)} aria-label="Halaman berikutnya"><ChevronRight className="size-4" /></button></div></div>
+
+      <div className="flex items-center justify-between text-sm text-muted-foreground"><span>{result.total} transaksi</span><div className="flex items-center gap-2"><Button size="icon" variant="outline" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} aria-label="Halaman sebelumnya"><ChevronLeft /></Button><span className="min-w-12 text-center">{page} / {result.pages}</span><Button size="icon" variant="outline" disabled={page >= result.pages} onClick={() => setPage((value) => value + 1)} aria-label="Halaman berikutnya"><ChevronRight /></Button></div></div>
+
+      <AlertDialog open={Boolean(deleteCandidate)} onOpenChange={(open) => { if (!open && !deleting) setDeleteCandidate(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogMedia className="bg-destructive/10 text-destructive"><Trash2 /></AlertDialogMedia><AlertDialogTitle>Hapus transaksi?</AlertDialogTitle><AlertDialogDescription>Transaksi “{deleteCandidate?.description}” akan dihapus permanen dan tidak dapat dikembalikan.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel disabled={deleting}>Batal</AlertDialogCancel><AlertDialogAction variant="destructive" disabled={deleting} onClick={() => void remove()}>{deleting ? "Menghapus..." : "Hapus"}</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
-function TransactionCard({ item, onEdit, onDelete }: { item: Transaction; onEdit: () => void; onDelete: () => void }) { return <article className="rounded-2xl border bg-card p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="truncate font-medium">{item.description}</h2><p className="mt-1 text-xs text-muted-foreground">{item.categoryName} · {item.accountName}</p></div><p className={`shrink-0 font-semibold ${item.type === "INCOME" ? "text-emerald-600 dark:text-emerald-400" : ""}`}>{item.type === "INCOME" ? "+" : "−"}{formatRupiah(item.amount)}</p></div><div className="mt-4 flex items-center justify-between border-t pt-3"><span className="text-xs text-muted-foreground">{formatDate(item.transactionDate)}</span><div className="flex"><IconButton label="Edit" onClick={onEdit}><Pencil /></IconButton><IconButton label="Hapus" onClick={onDelete} destructive><Trash2 /></IconButton></div></div></article>; }
-function IconButton({ label, children, onClick, destructive = false }: { label: string; children: React.ReactNode; onClick: () => void; destructive?: boolean }) { return <button className={`tap-target grid place-items-center rounded-lg [&>svg]:size-4 ${destructive ? "text-destructive" : "text-muted-foreground"}`} onClick={onClick} aria-label={label} type="button">{children}</button>; }
-function LoadingRows() { return <div className="space-y-3" aria-label="Memuat transaksi">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-24 animate-pulse rounded-2xl bg-muted" />)}</div>; }
-function ReceiptEmpty() { return <div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-muted"><LoaderCircle className="size-5 text-muted-foreground" /></div>; }
-function formatDate(value: string) { return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" }).format(new Date(`${value}T12:00:00+07:00`)); }
+function TransactionCard({ item, onEdit, onDelete }: { item: Transaction; onEdit: () => void; onDelete: () => void }) {
+  return (
+    <article className="surface-card p-4">
+      <div className="flex items-start gap-3">
+        <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${item.type === "INCOME" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>{item.type === "INCOME" ? <ArrowUpRight className="size-5" /> : <ArrowDownRight className="size-5" />}</span>
+        <div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{item.description}</h2><p className="mt-1 truncate text-xs text-muted-foreground">{item.categoryName} · {item.accountName}</p><p className="mt-1 text-xs text-muted-foreground">{formatDate(item.transactionDate)} · {item.source === "AI" ? "Dicatat AI" : "Manual"}</p></div>
+        <div className="flex shrink-0 items-start gap-1"><p className={`pt-2 text-sm font-bold ${item.type === "INCOME" ? "text-success" : "text-foreground"}`}>{item.type === "INCOME" ? "+" : "−"}{formatRupiah(item.amount)}</p><ActionMenu onEdit={onEdit} onDelete={onDelete} /></div>
+      </div>
+    </article>
+  );
+}
+
+function ActionMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+  return <DropdownMenu><DropdownMenuTrigger render={<Button aria-label="Buka menu transaksi" size="icon" variant="ghost" />}><MoreHorizontal className="size-5" /></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem className="h-11 gap-2" onClick={onEdit}><Pencil />Edit</DropdownMenuItem><DropdownMenuItem className="h-11 gap-2" variant="destructive" onClick={onDelete}><Trash2 />Hapus</DropdownMenuItem></DropdownMenuContent></DropdownMenu>;
+}
+
+function LoadingRows() {
+  return <div className="space-y-3" aria-label="Memuat transaksi">{Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-24 rounded-xl" />)}</div>;
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" }).format(new Date(`${value}T12:00:00+07:00`));
+}

@@ -25,7 +25,14 @@ export async function POST(request: Request) {
     if (!account || !category) return Response.json({ error: "Akun atau kategori yang sesuai belum tersedia. Gunakan input manual." }, { status: 422 });
     return Response.json({ type: extracted.type, amount: extracted.amount, description: extracted.description, accountId: account.id, categoryId: category.id, transactionDate: extracted.transactionDate ?? jakartaToday(), source: "AI" }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    if (error instanceof GeminiUnavailableError || error instanceof z.ZodError) return Response.json({ error: "AI sedang tidak tersedia. Kamu masih bisa mencatat transaksi secara manual." }, { status: 503 });
+    if (error instanceof GeminiUnavailableError) {
+      console.error("Gemini smart input unavailable", { message: error.message, status: error.status });
+      return Response.json({ error: "AI sedang tidak tersedia. Kamu masih bisa mencatat transaksi secara manual." }, { status: 503 });
+    }
+    if (error instanceof z.ZodError) {
+      console.error("Gemini smart input returned invalid data", error.issues);
+      return Response.json({ error: "AI belum dapat membaca transaksi tersebut. Coba tulis nominal dan keterangannya lebih jelas." }, { status: 422 });
+    }
     return apiError(error);
   }
 }

@@ -1,20 +1,178 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Archive, LoaderCircle, Pencil, Plus, Shapes } from "lucide-react";
+import { Archive, MoreHorizontal, Pencil, Plus, Shapes, TrendingDown, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Category = { id: string; name: string; type: "INCOME" | "EXPENSE"; isSystem: boolean };
 
 export function CategoriesClient() {
-  const [items, setItems] = useState<Category[]>([]); const [loading, setLoading] = useState(true);
-  const load = useCallback(async () => { setLoading(true); try { const response = await fetch("/api/categories", { cache: "no-store" }); if (!response.ok) throw new Error(); setItems(await response.json()); } catch { toast.error("Kategori gagal dimuat."); } finally { setLoading(false); } }, []);
-  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
-  async function create(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); const response = await fetch("/api/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: data.get("name"), type: data.get("type") }) }); if (!response.ok) { toast.error("Gagal menambah kategori."); return; } form.reset(); toast.success("Kategori berhasil ditambahkan"); void load(); }
-  async function rename(item: Category) { const name = window.prompt("Nama kategori baru", item.name)?.trim(); if (!name || name === item.name) return; const response = await fetch(`/api/categories/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) }); if (!response.ok) { toast.error("Kategori sistem tidak dapat diubah."); return; } toast.success("Kategori diperbarui"); void load(); }
-  async function archive(item: Category) { if (!window.confirm(`Arsipkan kategori “${item.name}”?`)) return; const response = await fetch(`/api/categories/${item.id}`, { method: "DELETE" }); if (!response.ok) { toast.error("Kategori sistem tidak dapat diarsipkan."); return; } toast.success("Kategori diarsipkan"); void load(); }
-  return <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-    <div className="grid gap-6 md:grid-cols-2">{(["EXPENSE", "INCOME"] as const).map((type) => <section key={type} className="rounded-2xl border bg-card p-5"><h2 className="font-heading text-lg font-semibold">{type === "EXPENSE" ? "Pengeluaran" : "Pemasukan"}</h2><div className="mt-4 space-y-2">{loading ? <LoaderCircle className="size-5 animate-spin text-muted-foreground" /> : items.filter((item) => item.type === type).map((item) => <div key={item.id} className="flex min-h-12 items-center gap-3 rounded-xl border px-3"><span className="grid size-8 place-items-center rounded-lg bg-muted"><Shapes className="size-4" /></span><span className="min-w-0 flex-1 truncate text-sm font-medium">{item.name}</span>{item.isSystem ? <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Bawaan</span> : <><button className="tap-target grid place-items-center text-muted-foreground" onClick={() => rename(item)} aria-label={`Ubah ${item.name}`}><Pencil className="size-4" /></button><button className="tap-target grid place-items-center text-muted-foreground hover:text-destructive" onClick={() => archive(item)} aria-label={`Arsipkan ${item.name}`}><Archive className="size-4" /></button></>}</div>)}</div></section>)}</div>
-    <form className="h-fit space-y-4 rounded-2xl border bg-card p-5" onSubmit={create}><div><h2 className="font-heading text-lg font-semibold">Kategori baru</h2><p className="mt-1 text-sm text-muted-foreground">Tambahkan kategori personal.</p></div><label className="block space-y-2 text-sm font-medium"><span>Nama</span><input className="h-11 w-full rounded-xl border bg-background px-3" name="name" maxLength={60} required placeholder="Kebutuhan rumah" /></label><label className="block space-y-2 text-sm font-medium"><span>Jenis</span><select className="h-11 w-full rounded-xl border bg-background px-3" name="type"><option value="EXPENSE">Pengeluaran</option><option value="INCOME">Pemasukan</option></select></label><button className="tap-target flex w-full items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-primary-foreground"><Plus className="size-4" />Tambah kategori</button></form>
-  </div>;
+  const [items, setItems] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<Category | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [archiveCandidate, setArchiveCandidate] = useState<Category | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/categories", { cache: "no-store" });
+      if (!response.ok) throw new Error();
+      setItems(await response.json());
+    } catch {
+      toast.error("Kategori gagal dimuat.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+
+  async function create(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const response = await fetch("/api/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: data.get("name"), type: data.get("type") }),
+    });
+    setBusy(false);
+    if (!response.ok) {
+      toast.error("Gagal menambah kategori.");
+      return;
+    }
+    form.reset();
+    toast.success("Kategori berhasil ditambahkan.");
+    void load();
+  }
+
+  async function rename() {
+    if (!editing) return;
+    const name = renameValue.trim();
+    if (!name || name === editing.name) {
+      setEditing(null);
+      return;
+    }
+    setBusy(true);
+    const response = await fetch(`/api/categories/${editing.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    setBusy(false);
+    if (!response.ok) {
+      toast.error("Kategori sistem tidak dapat diubah.");
+      return;
+    }
+    toast.success("Kategori diperbarui.");
+    setEditing(null);
+    void load();
+  }
+
+  async function archive() {
+    if (!archiveCandidate) return;
+    setBusy(true);
+    const response = await fetch(`/api/categories/${archiveCandidate.id}`, { method: "DELETE" });
+    setBusy(false);
+    if (!response.ok) {
+      toast.error("Kategori sistem tidak dapat diarsipkan.");
+      return;
+    }
+    toast.success("Kategori diarsipkan.");
+    setArchiveCandidate(null);
+    void load();
+  }
+
+  return (
+    <>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Tabs defaultValue="EXPENSE">
+          <TabsList className="h-11 w-full max-w-sm grid-cols-2">
+            <TabsTrigger value="EXPENSE"><TrendingDown /> Pengeluaran</TabsTrigger>
+            <TabsTrigger value="INCOME"><TrendingUp /> Pemasukan</TabsTrigger>
+          </TabsList>
+          {(["EXPENSE", "INCOME"] as const).map((type) => (
+            <TabsContent key={type} value={type}>
+              <Card>
+                <CardHeader className="flex-row items-center justify-between">
+                  <div><CardTitle>{type === "EXPENSE" ? "Kategori pengeluaran" : "Kategori pemasukan"}</CardTitle><p className="mt-1 text-sm text-muted-foreground">{items.filter((item) => item.type === type).length} kategori aktif</p></div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {loading ? [0, 1, 2, 3].map((item) => <Skeleton className="h-14 rounded-xl" key={item} />) : items.filter((item) => item.type === type).map((item) => <CategoryRow item={item} key={item.id} onArchive={setArchiveCandidate} onEdit={(category) => { setEditing(category); setRenameValue(category.name); }} />)}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          ))}
+        </Tabs>
+
+        <Card className="h-fit xl:sticky xl:top-8">
+          <CardHeader><CardTitle>Kategori baru</CardTitle><p className="text-sm text-muted-foreground">Tambahkan klasifikasi yang sesuai dengan kebiasaanmu.</p></CardHeader>
+          <CardContent>
+            <form className="space-y-4" onSubmit={create}>
+              <div className="space-y-2"><Label htmlFor="category-name">Nama kategori</Label><Input id="category-name" name="name" maxLength={60} required placeholder="Kebutuhan rumah" /></div>
+              <div className="space-y-2">
+                <Label>Jenis kategori</Label>
+                <Select defaultValue="EXPENSE" name="type">
+                  <SelectTrigger className="h-11 w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="EXPENSE">Pengeluaran</SelectItem><SelectItem value="INCOME">Pemasukan</SelectItem></SelectContent>
+                </Select>
+              </div>
+              <Button className="w-full" disabled={busy} size="lg" type="submit"><Plus /> Tambah kategori</Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => { if (!open) setEditing(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Ubah nama kategori</DialogTitle><DialogDescription>Perubahan nama juga akan terlihat pada transaksi lama.</DialogDescription></DialogHeader>
+          <div className="space-y-2"><Label htmlFor="rename-category">Nama kategori</Label><Input id="rename-category" value={renameValue} onChange={(event) => setRenameValue(event.target.value)} maxLength={60} autoFocus /></div>
+          <DialogFooter><Button variant="outline" onClick={() => setEditing(null)}>Batal</Button><Button disabled={busy || !renameValue.trim()} onClick={() => void rename()}>Simpan</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={Boolean(archiveCandidate)} onOpenChange={(open) => { if (!open) setArchiveCandidate(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogMedia className="bg-destructive/10 text-destructive"><Archive /></AlertDialogMedia><AlertDialogTitle>Arsipkan kategori?</AlertDialogTitle><AlertDialogDescription>Kategori “{archiveCandidate?.name}” tidak lagi tersedia untuk transaksi baru. Riwayat yang sudah ada tetap tersimpan.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel disabled={busy}>Batal</AlertDialogCancel><AlertDialogAction disabled={busy} variant="destructive" onClick={() => void archive()}>Arsipkan</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+function CategoryRow({ item, onArchive, onEdit }: { item: Category; onArchive: (item: Category) => void; onEdit: (item: Category) => void }) {
+  return (
+    <div className="flex min-h-14 items-center gap-3 rounded-xl border bg-background px-3 transition-colors hover:bg-muted/40">
+      <span className={`grid size-9 place-items-center rounded-lg ${item.type === "INCOME" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}><Shapes className="size-4" /></span>
+      <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
+      {item.isSystem ? <Badge variant="secondary">Bawaan</Badge> : (
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button aria-label={`Aksi untuk ${item.name}`} size="icon" variant="ghost" />}><MoreHorizontal /></DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem className="h-11" onClick={() => onEdit(item)}><Pencil /> Ubah nama</DropdownMenuItem>
+            <DropdownMenuItem className="h-11" onClick={() => onArchive(item)} variant="destructive"><Archive /> Arsipkan</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  );
 }
