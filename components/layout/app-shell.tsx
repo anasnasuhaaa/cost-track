@@ -6,7 +6,7 @@ import { Bot, ChartPie, ChevronRight, CircleDollarSign, FolderKanban, Landmark, 
 
 import { QuickAddSheet } from "@/components/transactions/quick-add-sheet";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuLinkItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuLinkItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 import { ThemeMenu, ThemeToggle } from "./theme-menu";
 
@@ -88,10 +88,12 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
             <UserRound className="size-5" /><span>Profil</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="top" sideOffset={10} className="mb-[env(safe-area-inset-bottom)] min-w-52 p-2">
-            <DropdownMenuLabel><span className="block truncate text-foreground">{user.name}</span><span className="block truncate font-normal">{user.email}</span></DropdownMenuLabel>
-            <DropdownMenuLinkItem className="h-11 gap-3" render={<Link href="/accounts" />}><WalletCards />Akun<ChevronRight className="ml-auto" /></DropdownMenuLinkItem>
-            <DropdownMenuLinkItem className="h-11 gap-3" render={<Link href="/categories" />}><FolderKanban />Kategori<ChevronRight className="ml-auto" /></DropdownMenuLinkItem>
-            <DropdownMenuLinkItem className="h-11 gap-3" render={<Link href="/settings" />}><Settings />Pengaturan<ChevronRight className="ml-auto" /></DropdownMenuLinkItem>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel><span className="block truncate text-foreground">{user.name}</span><span className="block truncate font-normal">{user.email}</span></DropdownMenuLabel>
+              <DropdownMenuLinkItem className="h-11 gap-3" render={<Link href="/accounts" />}><WalletCards />Akun<ChevronRight className="ml-auto" /></DropdownMenuLinkItem>
+              <DropdownMenuLinkItem className="h-11 gap-3" render={<Link href="/categories" />}><FolderKanban />Kategori<ChevronRight className="ml-auto" /></DropdownMenuLinkItem>
+              <DropdownMenuLinkItem className="h-11 gap-3" render={<Link href="/settings" />}><Settings />Pengaturan<ChevronRight className="ml-auto" /></DropdownMenuLinkItem>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="h-11 gap-3" variant="destructive" onClick={logout}><LogOut />Keluar</DropdownMenuItem>
           </DropdownMenuContent>
